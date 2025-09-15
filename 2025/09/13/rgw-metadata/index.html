@@ -1,0 +1,994 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="S.E">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Meta Data saved in pools Pools used by Zone1234567891011121314151617181920&#123;  &quot;domain_root&quot;: &quot;.rgw&quot;,  &quot;control_pool&quot;: &quot;.rgw.control&quot;,  &quot;gc_pool&quot;:">
+<meta property="og:type" content="article">
+<meta property="og:title" content="rgw metadata, pool and system objects">
+<meta property="og:url" content="http://somebody-else.github.io/2025/09/13/rgw-metadata/index.html">
+<meta property="og:site_name" content="PromisedLand">
+<meta property="og:description" content="Meta Data saved in pools Pools used by Zone1234567891011121314151617181920&#123;  &quot;domain_root&quot;: &quot;.rgw&quot;,  &quot;control_pool&quot;: &quot;.rgw.control&quot;,  &quot;gc_pool&quot;:">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-metadata/rgw-meta-object-class.png">
+<meta property="article:published_time" content="2025-09-14T01:00:07.000Z">
+<meta property="article:modified_time" content="2025-09-15T18:04:01.962Z">
+<meta property="article:author" content="S.E">
+<meta property="article:tag" content="ceph">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://somebody-else.github.io/rgw-metadata/rgw-meta-object-class.png">
+  
+  
+  
+  <title>rgw metadata, pool and system objects - PromisedLand</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"somebody-else.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Promised Land</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>Home</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>Archives</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>Categories</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>Tags</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>About</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="rgw metadata, pool and system objects"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2025-09-13 18:00" pubdate>
+          September 13, 2025 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          1.1k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          10 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">rgw metadata, pool and system objects</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>Meta Data saved in pools</p>
+<h1 id="Pools-used-by-Zone"><a href="#Pools-used-by-Zone" class="headerlink" title="Pools used by Zone"></a>Pools used by Zone</h1><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs json"><span class="hljs-punctuation">&#123;</span><br>  <span class="hljs-attr">&quot;domain_root&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;control_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.control&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;gc_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.gc&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;log_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.log&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;intent_log_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.log&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;usage_log_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.usage&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;reshard_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.reshard&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;user_keys_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.meta&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;user_email_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.meta&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;user_swift_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.meta&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;user_uid_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.meta&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;bucket_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.buckets&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;bucket_index_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.buckets.index&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;bucket_marker_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.meta&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;metadata_heap_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.meta&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;realm_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;abc123&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;default&quot;</span><span class="hljs-punctuation">,</span><br>  <span class="hljs-attr">&quot;index_pool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;.rgw.buckets.index&quot;</span><br><span class="hljs-punctuation">&#125;</span><br></code></pre></td></tr></table></figure>
+
+
+
+
+
+<p>Frist, we need to correct understand <code>domain_root</code>, it is the prefix of all the system object keys</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs python">void RGWZoneParams::decode_json(JSONObj *obj)<br>&#123;<br>  RGWSystemMetaObj::decode_json(obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;domain_root&quot;</span>, domain_root, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;control_pool&quot;</span>, control_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;gc_pool&quot;</span>, gc_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;lc_pool&quot;</span>, lc_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;log_pool&quot;</span>, log_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;intent_log_pool&quot;</span>, intent_log_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;roles_pool&quot;</span>, roles_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;reshard_pool&quot;</span>, reshard_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;usage_log_pool&quot;</span>, usage_log_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;user_keys_pool&quot;</span>, user_keys_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;user_email_pool&quot;</span>, user_email_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;user_swift_pool&quot;</span>, user_swift_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;user_uid_pool&quot;</span>, user_uid_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;otp_pool&quot;</span>, otp_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;notif_pool&quot;</span>, notif_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;topics_pool&quot;</span>, topics_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;account_pool&quot;</span>, account_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;group_pool&quot;</span>, group_pool, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;system_key&quot;</span>, system_key, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;placement_pools&quot;</span>, placement_pools, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;tier_config&quot;</span>, tier_config, obj);<br>  JSONDecoder::decode_json(<span class="hljs-string">&quot;realm_id&quot;</span>, realm_id, obj);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs bash">radosgw-admin zone create \<br>  --rgw-zone=dev \<br>  --user-uid-pool=<span class="hljs-string">&quot;.dev.meta&quot;</span> \<br>  --control-pool=<span class="hljs-string">&quot;.dev.control&quot;</span> \<br>  --log-pool=<span class="hljs-string">&quot;.dev.log&quot;</span> \<br>  --metadata-heap-pool=<span class="hljs-string">&quot;.dev.meta&quot;</span> \<br>  ...<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-comment">//rgw/rgw_zone.cc</span><br><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">init_zone_pool_names</span><span class="hljs-params">(<span class="hljs-type">const</span> DoutPrefixProvider *dpp, optional_yield y,</span></span><br><span class="hljs-params"><span class="hljs-function">                         <span class="hljs-type">const</span> std::set&lt;rgw_pool&gt;&amp; pools, RGWZoneParams&amp; info)</span></span><br><span class="hljs-function"></span>&#123;<br>  info.domain_root = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:root&quot;</span>, info.domain_root);<br>  info.control_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.control&quot;</span>, info.control_pool);<br>  info.gc_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.log:gc&quot;</span>, info.gc_pool);<br>  info.lc_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.log:lc&quot;</span>, info.lc_pool);<br>  info.log_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.log&quot;</span>, info.log_pool);<br>  info.intent_log_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.log:intent&quot;</span>, info.intent_log_pool);<br>  info.usage_log_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.log:usage&quot;</span>, info.usage_log_pool);<br>  info.user_keys_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:users.keys&quot;</span>, info.user_keys_pool);<br>  info.user_email_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:users.email&quot;</span>, info.user_email_pool);<br>  info.user_swift_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:users.swift&quot;</span>, info.user_swift_pool);<br>  info.user_uid_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:users.uid&quot;</span>, info.user_uid_pool);<br>  info.roles_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:roles&quot;</span>, info.roles_pool);<br>  info.reshard_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.log:reshard&quot;</span>, info.reshard_pool);<br>  info.otp_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.otp&quot;</span>, info.otp_pool);<br>  info.oidc_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:oidc&quot;</span>, info.oidc_pool);<br>  info.notif_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.log:notif&quot;</span>, info.notif_pool);<br>  info.topics_pool =<br>      <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:topics&quot;</span>, info.topics_pool);<br>  info.account_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:accounts&quot;</span>, info.account_pool);<br>  info.group_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.rgw.meta:groups&quot;</span>, info.group_pool);<br><br>  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">auto</span>&amp; [pname, placement] : info.placement_pools) &#123;<br>    placement.index_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.&quot;</span> + default_bucket_index_pool_suffix, placement.index_pool);<br>    placement.data_extra_pool= <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.&quot;</span> + default_storage_extra_pool_suffix, placement.data_extra_pool);<br>    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">auto</span>&amp; [sname, sc] : placement.storage_classes.<span class="hljs-built_in">get_all</span>()) &#123;<br>      <span class="hljs-keyword">if</span> (sc.data_pool) &#123;<br>        sc.data_pool = <span class="hljs-built_in">fix_zone_pool_dup</span>(pools, info.name, <span class="hljs-string">&quot;.&quot;</span> + default_storage_pool_suffix, *sc.data_pool);<br>      &#125;<br>    &#125;<br>  &#125;<br><br>  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+
+
+
+<p>The pools used by Zone is not statically defined,  you can custom them when you create the zone, or after the zone created.  They don’t have to be unique with each other either. You can configure all the meta data to use same pool. It is OK for dev env, but not recommanded for Production.</p>
+<ul>
+<li><p><code>.rgw.root</code></p>
+<p>Region, zone, and global information records, one per object.</p>
+<ul>
+<li>Realm info</li>
+<li>Zone Group info</li>
+<li>Zone parameters</li>
+<li>Period Config</li>
+</ul>
+</li>
+<li><p><code>&lt;zone&gt;.rgw.control</code></p>
+<p>notify.<N></p>
+</li>
+<li><p><code>&lt;zone&gt;.rgw.meta</code></p>
+<p>This is a very important pool, which stores most kinds of meta data, each with aunique namespaces .</p>
+<div class="table-container">
+  <table>
+    <tr>
+      <th>Name Space</th>
+             <th>Logical Pool</th>
+      <th>Meta Data</th>
+      <th>Key</th>
+      <th>Description</th>
+    <tr>
+      <td rowspan="2">root</td>
+      <td rowspan="2">domain-root</td>
+      <td>bucket entrypoint</td>
+      <td>{bucket_id}</td>
+      <td>Bucket static info</td>
+    </tr>
+    <tr>
+      <td>bucket instance</td>
+      <td>Bucket.meta.{bucket}.{marker}</td>
+            <td>Stores live state of the bucket (versioning, placement, shard info)</td>
+    </tr>
+    <tr>
+      <td>users.uid</td>
+      <td>user_uid_pool</td>
+      <td></td>
+      <td></td>
+      <td>Contains both per-user information (RGWUserInfo) in “{user}” objects and per-user lists of buckets in omaps of “{user}.buckets” objects.</td>
+    </tr>
+    <tr>
+      <td>users.keys</td>
+      <td>user_keys_pool</td>
+      <td></td>
+      <td></td>
+      <td>Loop up user by its access key</td>
+    </tr>
+    <tr>
+      <td>users.emails</td>
+      <td>user_email_pool</td>
+      <td></td>
+      <td></td>
+      <td>Loop up user by its email</td>
+    </tr>
+    <tr>
+      <td>accounts</td>
+      <td>account_pool</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>roles</td>
+      <td>roles pool</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>groups</td>
+      <td>groups pool</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>topic</td>
+      <td>topic pool</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </table>
+</div></li>
+</ul>
+<p><img src="/rgw-metadata/rgw-meta-object-class.png" srcset="/img/loading.gif" lazyload alt="classes in code"></p>
+<h2 id="Bucket-Related-Meta-Data"><a href="#Bucket-Related-Meta-Data" class="headerlink" title="Bucket Related Meta Data"></a>Bucket Related Meta Data</h2><h3 id="Bucket-ID"><a href="#Bucket-ID" class="headerlink" title="Bucket ID"></a>Bucket ID</h3><p>Bucket ID &#x3D;  {zone_id}.{instance_id}.{bucket_numeric_id}</p>
+<blockquote>
+<p>Instance id is the rgw daemon’s id, it is usually genreated randomly or manually configured.</p>
+</blockquote>
+<p>Bucket Marker &#x3D; {bucket_id}  if the bucket is not shared.</p>
+<p>Bucket Marker &#x3D; {shard_id}#{bucket_id} if the bucket is shared.</p>
+<h3 id="Bucket-Endpoint"><a href="#Bucket-Endpoint" class="headerlink" title="Bucket Endpoint"></a>Bucket Endpoint</h3><h3 id="Bucket-Instance"><a href="#Bucket-Instance" class="headerlink" title="Bucket Instance"></a>Bucket Instance</h3><h3 id="Bucket-Index-Pool"><a href="#Bucket-Index-Pool" class="headerlink" title="Bucket Index Pool"></a>Bucket Index Pool</h3><p>The bucket index is a different kind of metadata, and is kept separately.  It is defined in zone’s placement pool setting, along with bucket data pool.<br>The bucket index holds a key-value map attached to RADOS objects. By default it is a single RADOS object per bucket, but it is possible since Hammer to shard that map over multiple RADOS objects. The map itself is kept in omap, associated with each RADOS object. The key of each omap is the name of the object, and the value holds some basic metadata of that object – metadata that shows up when listing the bucket. Also, each omap holds a header, and we keep some bucket accounting metadata in that header (number of objects, total size, etc.).</p>
+<blockquote>
+<p>Default Pool: <zone>.rgw.buckets.index<br>Objects are named .dir.<marker>: each contains a bucket index. If the index is sharded, each shard appends the shard index after the marker.</p>
+</blockquote>
+<p>Note that we also hold other information in the bucket index, which is kept in other key namespaces. We can hold the bucket index log there, and for versioned objects there is more information that we keep on other keys.</p>
+<blockquote>
+<p>OMAP  - A key-value map used in metadata objects</p>
+<p>In rgw code, it looks like didn’t save the key, it just use a fixed schema to serialize the structure.</p>
+</blockquote>
+<h1 id="RGW-Meta-data"><a href="#RGW-Meta-data" class="headerlink" title="RGW Meta data"></a>RGW Meta data</h1><table>
+<thead>
+<tr>
+<th><strong>Metadata Type</strong></th>
+<th><strong>Object Key Format</strong></th>
+<th><strong>Used For</strong></th>
+<th><strong>Stored In</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>User Info</strong></td>
+<td>.users.uid:&lt;user_id&gt;</td>
+<td>Stores user account details (display name, email, keys, quotas)</td>
+<td>.rgw.meta pool</td>
+</tr>
+<tr>
+<td>User Email Lookup</td>
+<td>.users.email:&lt;email&gt;</td>
+<td>Lookup: email → user ID</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>User Access Key Lookup</td>
+<td>.users.keys:&lt;access_key&gt;</td>
+<td>Lookup: access_key → user ID</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>User Usage Stats</td>
+<td>.user.usage:&lt;user_id&gt;</td>
+<td>Aggregated usage statistics (bytes, ops)</td>
+<td>.rgw.usage (optional)</td>
+</tr>
+<tr>
+<td>User Swift Key</td>
+<td>.user.swift:&lt;user_id&gt;</td>
+<td>Swift-specific authentication keys</td>
+<td>.rgw.meta</td>
+</tr>
+</tbody></table>
+<h2 id="Bucket-meta-data"><a href="#Bucket-meta-data" class="headerlink" title="Bucket meta data"></a>Bucket meta data</h2><table>
+<thead>
+<tr>
+<th><strong>Metadata Type</strong></th>
+<th><strong>Object Key Format</strong></th>
+<th><strong>Used For</strong></th>
+<th><strong>Stored In</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Bucket Metadata (static)</strong></td>
+<td>.bucket.meta:&lt;bucket_name&gt;:&lt;bucket_id&gt;</td>
+<td>Stores bucket identifier, owner, ACLs, etc.</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td><strong>Bucket Instance</strong></td>
+<td>.bucket.instance:&lt;bucket_name&gt;:&lt;bucket_instance_id&gt;</td>
+<td>Stores live state of the bucket (versioning, placement, shard info)</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Bucket Index</td>
+<td>&lt;bucket_index_object&gt;</td>
+<td>Stores object index per bucket (if enabled)</td>
+<td>bucket’s index_pool</td>
+</tr>
+<tr>
+<td>Bucket Directory Metadata</td>
+<td>.dir.meta:&lt;bucket&gt;</td>
+<td>Used for listing (legacy or FS-style)</td>
+<td>.rgw.meta or bucket’s pool</td>
+</tr>
+</tbody></table>
+<h3 id="Bucket-ID-1"><a href="#Bucket-ID-1" class="headerlink" title="Bucket ID"></a>Bucket ID</h3><p>Bucket ID &#x3D;  <zone_id>.<instance_id>.<bucket_numeric_id></p>
+<blockquote>
+<p>Instance id is the rgw daemon’s id, it is usually genreated randomly or manually configured.</p>
+</blockquote>
+<p>Bucket Marker &#x3D; Bucket ID  if the bucket is not shared.</p>
+<p>Bucket Marker &#x3D; Shard_ID#bucket_id if the ucket is shared.</p>
+<h3 id="Bucket-Index-Pool-1"><a href="#Bucket-Index-Pool-1" class="headerlink" title="Bucket Index Pool"></a>Bucket Index Pool</h3><p>The bucket index is a different kind of metadata, and is kept separately.  It is defined in zone’s placement pool setting, alog with bucket data pool.<br>The bucket index holds a key-value map attached to RADOS objects. By default it is a single RADOS object per bucket, but it is possible since Hammer to shard that map over multiple RADOS objects. The map itself is kept in omap, associated with each RADOS object. The key of each omap is the name of the object, and the value holds some basic metadata of that object – metadata that shows up when listing the bucket. Also, each omap holds a header, and we keep some bucket accounting metadata in that header (number of objects, total size, etc.).</p>
+<blockquote>
+<p>Default Pool: <zone>.rgw.buckets.index<br>Objects are named .dir.<marker>: each contains a bucket index. If the index is sharded, each shard appends the shard index after the marker.</p>
+</blockquote>
+<p>Note that we also hold other information in the bucket index, which is kept in other key namespaces. We can hold the bucket index log there, and for versioned objects there is more information that we keep on other keys.</p>
+<table>
+<thead>
+<tr>
+<th><strong>Metadata Type</strong></th>
+<th><strong>Object Key Format</strong></th>
+<th><strong>Used For</strong></th>
+<th><strong>Stored In</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Multi-site Metadata Log</strong></td>
+<td>.meta.log:&lt;bucket&gt;:&lt;shard&gt;</td>
+<td>Metadata log for bucket (object creation&#x2F;deletion)</td>
+<td>.rgw.log</td>
+</tr>
+<tr>
+<td>Data Sync Log</td>
+<td>.data.log:&lt;bucket&gt;:&lt;shard&gt;</td>
+<td>Data log for multi-site object sync</td>
+<td>.rgw.log</td>
+</tr>
+<tr>
+<td>Sync Status</td>
+<td>.rgw.sync.status</td>
+<td>Tracks sync status per zone</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Sync Error</td>
+<td>.rgw.sync.error:&lt;shard&gt;</td>
+<td>Tracks sync errors</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Sync Marker</td>
+<td>.rgw.sync.marker:&lt;shard&gt;</td>
+<td>Points to latest processed sync log</td>
+<td>.rgw.meta</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th><strong>Metadata Type</strong></th>
+<th><strong>Object Key Format</strong></th>
+<th><strong>Used For</strong></th>
+<th><strong>Stored In</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Realm Config</strong></td>
+<td>.realm:&lt;realm_id&gt;</td>
+<td>Realm (multi-site root entity) metadata</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Zonegroup Config</td>
+<td>.zonegroup:&lt;zonegroup_id&gt;</td>
+<td>Zonegroup metadata</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Zone Config</td>
+<td>.zone:&lt;zone_id&gt;</td>
+<td>Zone metadata</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Period Config</td>
+<td>.period:&lt;epoch&gt;</td>
+<td>Zonegroup layout&#x2F;version snapshot</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Root Config Pointer</td>
+<td>.rgw.root</td>
+<td>Current active realm&#x2F;zonegroup&#x2F;zone</td>
+<td>.rgw.meta</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th><strong>Metadata Type</strong></th>
+<th><strong>Object Key Format</strong></th>
+<th><strong>Used For</strong></th>
+<th><strong>Stored In</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Quota Info</strong></td>
+<td>.user.quota:&lt;uid&gt;, .bucket.quota:&lt;bucket&gt;</td>
+<td>Quota settings per user or bucket</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Resharding Task Control</td>
+<td>.rgw.control.reshard</td>
+<td>Resharding work queue</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Reshard Status</td>
+<td>.rgw.reshard.status</td>
+<td>Status of current&#x2F;last reshard ops</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Orphaned Object Tracker</td>
+<td>.rgw.orphan</td>
+<td>Tracks objects missing metadata</td>
+<td>.rgw.meta</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th><strong>Other Metadata</strong></th>
+<th><strong>Object Key Format</strong></th>
+<th><strong>Used For</strong></th>
+<th><strong>Stored In</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Usage Aggregation</td>
+<td>.usage</td>
+<td>Global usage statistics</td>
+<td>.rgw.usage</td>
+</tr>
+<tr>
+<td>Temp URL Auth</td>
+<td>.temp.url:&lt;token&gt;</td>
+<td>Temporary URL tokens (if used)</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Bucket Notification Config</td>
+<td>(inline in .bucket.instance)</td>
+<td>Stores topic&#x2F;subscription configs</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>Website Config</td>
+<td>(inline in .bucket.instance)</td>
+<td>Bucket website settings</td>
+<td>.rgw.meta</td>
+</tr>
+<tr>
+<td>CORS &#x2F; Lifecycle</td>
+<td>(inline in .bucket.instance)</td>
+<td>Bucket CORS rules &#x2F; lifecycle policy</td>
+<td>.rgw.meta</td>
+</tr>
+</tbody></table>
+<h2 id="Data-Pools-Data-Placement-Target"><a href="#Data-Pools-Data-Placement-Target" class="headerlink" title="Data Pools - Data Placement Target"></a>Data Pools - Data Placement Target</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs C++"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">rgw_data_placement_target</span> &#123;<br><br>  rgw_pool data_pool; <span class="hljs-comment">// Pool used to save Objects.</span><br><br>  rgw_pool data_extra_pool; <span class="hljs-comment">// Pool used to save extra control data of objects.</span><br><br>  rgw_pool index_pool; <span class="hljs-comment">//Bucket Index Pool</span><br>  ...<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<ul>
+<li><p><code>&lt;zone&gt;.rgw.buckets.index</code></p>
+<p>Objects are named <code>.dir.&lt;marker&gt;</code>: each contains a bucket index. If the index is sharded, each shard appends the shard index after the marker.</p>
+</li>
+<li><p><code>&lt;zone&gt;.rgw.buckets.data</code></p>
+<p>example: <code>default.7593.4__shadow_.488urDFerTYXavx4yAd-Op8mxehnvTI_1</code> <marker>_<key></p>
+</li>
+</ul>
+<p>An example of a marker would be <code>default.16004.1</code> or <code>default.7593.4</code>. The current format is <code>&lt;zone&gt;.&lt;instance_id&gt;.&lt;bucket_id&gt;</code>. But once generated, a marker is not parsed again, so its format may change freely in the future.</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/ceph/" class="print-no-link">#ceph</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>rgw metadata, pool and system objects</div>
+      <div>http://somebody-else.github.io/2025/09/13/rgw-metadata/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>S.E</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 13, 2025</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2025/09/13/rgw-code-reading1/" title="Ceph RGW source code reading &lt;1&gt; - RGWSI Archtecture">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Ceph RGW source code reading &lt;1&gt; - RGWSI Archtecture</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>Table of Contents</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>

@@ -1511,14 +1511,14 @@ hr,
 .post-content,
 post-custom {
   box-sizing: border-box;
-  padding-left: 10%;
-  padding-right: 10%;
+  padding-left: 5%;
+  padding-right: 5%;
 }
 @media (max-width: 767px) {
   .post-content,
   post-custom {
-    padding-left: 2rem;
-    padding-right: 2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   .page-content,
   .post-content {
@@ -1528,8 +1528,8 @@ post-custom {
 @media (max-width: 424px) {
   .post-content,
   post-custom {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
   .page-content,
   .post-content {
