@@ -19,22 +19,28 @@
   <meta name="author" content="S.E">
   <meta name="keywords" content="">
   
-    <meta name="description" content="RGW treat all the subsystem as a service.  It carefully define each subsystem as a subclass of RGWServiceInstance.  RGWSI &#x3D;&#x3D; RGW Service Instance  What are services​	Following are the servi">
+    <meta name="description" content="RGW is an S3 Service build upon Ceph Rados distribute storage cluster.  It use a SAL layer to interact with Rados Storage.   The SAL layer employs an bridge between RadosStore(Driver on RGW side) and">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Ceph RGW source code reading &lt;1&gt; - RGWSI Archtecture">
 <meta property="og:url" content="http://somebody-else.github.io/2025/09/13/rgw-code-reading1/index.html">
 <meta property="og:site_name" content="PromisedLand">
-<meta property="og:description" content="RGW treat all the subsystem as a service.  It carefully define each subsystem as a subclass of RGWServiceInstance.  RGWSI &#x3D;&#x3D; RGW Service Instance  What are services​	Following are the servi">
+<meta property="og:description" content="RGW is an S3 Service build upon Ceph Rados distribute storage cluster.  It use a SAL layer to interact with Rados Storage.   The SAL layer employs an bridge between RadosStore(Driver on RGW side) and">
 <meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/How-RGW-connect-to-Rados.png">
 <meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/services-init-callstack.png">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/rados-service-mesh.png">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/rgw-init-routine.png">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/rgw-ctrl.png">
 <meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/mdlog-service.png">
-<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/metadata-backend-service.png">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/sysobject-class.png">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/metadata-backend.png">
+<meta property="og:image" content="http://somebody-else.github.io/rgw-code-reading1/metadata_be_module.png">
 <meta property="article:published_time" content="2025-09-14T01:00:07.000Z">
-<meta property="article:modified_time" content="2025-09-15T22:22:52.537Z">
+<meta property="article:modified_time" content="2025-10-20T22:24:23.691Z">
 <meta property="article:author" content="S.E">
 <meta property="article:tag" content="ceph">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://somebody-else.github.io/rgw-code-reading1/services-init-callstack.png">
+<meta name="twitter:image" content="http://somebody-else.github.io/rgw-code-reading1/How-RGW-connect-to-Rados.png">
   
   
   
@@ -227,7 +233,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.2k words
+          611 words
         
       </span>
     
@@ -238,7 +244,7 @@
         
         
         
-          10 mins
+          6 mins
         
       </span>
     
@@ -281,9 +287,20 @@
               <div class="markdown-body">
                 
                 <blockquote>
-<p>RGW treat all the subsystem as a service.  It carefully define each subsystem as a subclass of <strong>RGWServiceInstance</strong>. </p>
+<p>RGW is an S3 Service build upon Ceph Rados distribute storage cluster.  It use a SAL layer to interact with Rados Storage.   The SAL layer employs an bridge between RadosStore(Driver on RGW side) and RGWRados(Rados client on Rados side). </p>
+<p>RGWRados orgainze different RGW system Rados implementation code into a concept of <code>RGW Service Instance</code>.</p>
 <p>RGWSI &#x3D;&#x3D; RGW Service Instance</p>
 </blockquote>
+<div style="width: 600px;">
+  <img src="/rgw-code-reading1/How-RGW-connect-to-Rados.png" srcset="/img/loading.gif" lazyload alt="How RGW connect to Rados" style="width:100%;" />
+</div>
+
+
+
+<h2 id="The-initialization-code-path"><a href="#The-initialization-code-path" class="headerlink" title="The initialization code path"></a>The initialization code path</h2><div style="width: 600px;">
+  <img src="/rgw-code-reading1/services-init-callstack.png" srcset="/img/loading.gif" lazyload alt="Service Init Code" style="width:100%;" />
+</div>
+
 <h1 id="What-are-services"><a href="#What-are-services" class="headerlink" title="What are services"></a>What are services</h1><p>​	Following are the services RGW defined:</p>
 <table>
 <thead>
@@ -298,11 +315,11 @@
 </tr>
 <tr>
 <td>RGWSI_Bucket</td>
-<td></td>
+<td>Virtual class for RGWSI_Bucket_SObj</td>
 </tr>
 <tr>
 <td>RGWSI_Bucket_SObj</td>
-<td></td>
+<td>Bucket system object operation class, including:<br/>- bucket endpoint read&#x2F;write<br/>- bucket instance info read&#x2F;write<br/>- bucket statistics info read</td>
 </tr>
 <tr>
 <td>RGWSI_Bucket_Sync</td>
@@ -326,7 +343,7 @@
 </tr>
 <tr>
 <td>RGWSI_Cls</td>
-<td></td>
+<td>An abstraction of librados objclass operations</td>
 </tr>
 <tr>
 <td>RGWSI_ConfigKey</td>
@@ -338,7 +355,7 @@
 </tr>
 <tr>
 <td>RGWSI_MDLog</td>
-<td></td>
+<td>The MDlog service is used to read&#x2F;write MDLogs,which is used to sync metadata changes among mulitple zone in same zone group.</td>
 </tr>
 <tr>
 <td>RGWSI_Meta</td>
@@ -346,11 +363,11 @@
 </tr>
 <tr>
 <td>RGWSI_MetaBackend</td>
-<td></td>
+<td>The Metadata Backend service is used to execute the metadata operation, and also handle the meta data syncing among zones in same zone group by employing mdlog. It provide 4 methods: prepare_mutate, do_mutate, pre_modify and post_modify</td>
 </tr>
 <tr>
 <td>RGWSI_MetaBackend_SObj</td>
-<td></td>
+<td>Backend of System Object. It implemented the <code>RGWSI_MetaBackend</code>.  It have different <code>RGWSI_MBSObj_Handler_Module</code>.  Each <code>RGWSI_MBSObj_Handler_Module</code> class defined the pools and prefix of each system object type using.</td>
 </tr>
 <tr>
 <td>RGWSI_MetaBackend_OTP</td>
@@ -382,7 +399,7 @@
 </tr>
 <tr>
 <td>RGWSI_SysObj</td>
-<td></td>
+<td>The system object service provide a basic metadata read&#x2F;write operation.</td>
 </tr>
 <tr>
 <td>RGWSI_SysObj_Core</td>
@@ -416,9 +433,105 @@
 <blockquote>
 <p> All the service are defined and inited in  rgw_service.h</p>
 </blockquote>
-<h1 id="How-services-running"><a href="#How-services-running" class="headerlink" title="How services running"></a>How services running</h1><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">RGWServices_Def::init</span><span class="hljs-params">(CephContext *cct,</span></span><br><span class="hljs-params"><span class="hljs-function">			  rgw::sal::RadosStore* driver,</span></span><br><span class="hljs-params"><span class="hljs-function">			  <span class="hljs-type">bool</span> have_cache,</span></span><br><span class="hljs-params"><span class="hljs-function">                          <span class="hljs-type">bool</span> raw,</span></span><br><span class="hljs-params"><span class="hljs-function">			  <span class="hljs-type">bool</span> run_sync,</span></span><br><span class="hljs-params"><span class="hljs-function">			  optional_yield y,</span></span><br><span class="hljs-params"><span class="hljs-function">                          <span class="hljs-type">const</span> DoutPrefixProvider *dpp)</span></span><br><span class="hljs-function"></span>&#123;<br>  <span class="hljs-comment">/*Create all the service instances */</span><br>  finisher = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Finisher&gt;(cct);<br>  bucket_sobj = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Bucket_SObj&gt;(cct);<br>  bucket_sync_sobj = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Bucket_Sync_SObj&gt;(cct);<br>  bi_rados = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_BucketIndex_RADOS&gt;(cct);<br>  bilog_rados = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_BILog_RADOS&gt;(cct);<br>  cls = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Cls&gt;(cct);<br>  config_key_rados = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_ConfigKey_RADOS&gt;(cct);<br>  datalog_rados = std::<span class="hljs-built_in">make_unique</span>&lt;RGWDataChangesLog&gt;(cct);<br>  mdlog = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_MDLog&gt;(cct, run_sync);<br>  meta = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Meta&gt;(cct);<br>  meta_be_sobj = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_MetaBackend_SObj&gt;(cct);<br>  meta_be_otp = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_MetaBackend_OTP&gt;(cct);<br>  notify = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Notify&gt;(cct);<br>  otp = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_OTP&gt;(cct);<br>  zone = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Zone&gt;(cct);<br>  zone_utils = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_ZoneUtils&gt;(cct);<br>  quota = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Quota&gt;(cct);<br>  sync_modules = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_SyncModules&gt;(cct);<br>  sysobj = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_SysObj&gt;(cct);<br>  sysobj_core = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_SysObj_Core&gt;(cct);<br>  user_rados = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_User_RADOS&gt;(cct);<br>  role_rados = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_Role_RADOS&gt;(cct);<br>  async_processor = std::<span class="hljs-built_in">make_unique</span>&lt;RGWAsyncRadosProcessor&gt;(<br>    cct, cct-&gt;_conf-&gt;rgw_num_async_rados_threads);<br><br>  <span class="hljs-keyword">if</span> (have_cache) &#123;<br>    sysobj_cache = std::<span class="hljs-built_in">make_unique</span>&lt;RGWSI_SysObj_Cache&gt;(dpp, cct);<br>  &#125;<br>  <span class="hljs-comment">/* Init the backend service*/</span><br>  vector&lt;RGWSI_MetaBackend *&gt; meta_bes&#123;meta_be_sobj.<span class="hljs-built_in">get</span>(), meta_be_otp.<span class="hljs-built_in">get</span>()&#125;;<br><br>  async_processor-&gt;<span class="hljs-built_in">start</span>();<br>  finisher-&gt;<span class="hljs-built_in">init</span>();<br>  bi_rados-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>(), driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(),<br>		 bilog_rados.<span class="hljs-built_in">get</span>(), datalog_rados.<span class="hljs-built_in">get</span>());<br>  bilog_rados-&gt;<span class="hljs-built_in">init</span>(bi_rados.<span class="hljs-built_in">get</span>());<br>  bucket_sobj-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>(), sysobj.<span class="hljs-built_in">get</span>(), sysobj_cache.<span class="hljs-built_in">get</span>(),<br>                    bi_rados.<span class="hljs-built_in">get</span>(), meta.<span class="hljs-built_in">get</span>(), meta_be_sobj.<span class="hljs-built_in">get</span>(),<br>                    sync_modules.<span class="hljs-built_in">get</span>(), bucket_sync_sobj.<span class="hljs-built_in">get</span>());<br>  bucket_sync_sobj-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>(),<br>                         sysobj.<span class="hljs-built_in">get</span>(),<br>                         sysobj_cache.<span class="hljs-built_in">get</span>(),<br>                         bucket_sobj.<span class="hljs-built_in">get</span>());<br>  cls-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>(), driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>());<br>  config_key_rados-&gt;<span class="hljs-built_in">init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>());<br>  mdlog-&gt;<span class="hljs-built_in">init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(), zone.<span class="hljs-built_in">get</span>(), sysobj.<span class="hljs-built_in">get</span>(),<br>	      cls.<span class="hljs-built_in">get</span>(), async_processor.<span class="hljs-built_in">get</span>());<br>  meta-&gt;<span class="hljs-built_in">init</span>(sysobj.<span class="hljs-built_in">get</span>(), mdlog.<span class="hljs-built_in">get</span>(), meta_bes);<br>  meta_be_sobj-&gt;<span class="hljs-built_in">init</span>(sysobj.<span class="hljs-built_in">get</span>(), mdlog.<span class="hljs-built_in">get</span>());<br>  meta_be_otp-&gt;<span class="hljs-built_in">init</span>(sysobj.<span class="hljs-built_in">get</span>(), mdlog.<span class="hljs-built_in">get</span>(), cls.<span class="hljs-built_in">get</span>());<br>  notify-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>(), driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(),<br>	       finisher.<span class="hljs-built_in">get</span>());<br>  otp-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>(), meta.<span class="hljs-built_in">get</span>(), meta_be_otp.<span class="hljs-built_in">get</span>());<br>  zone-&gt;<span class="hljs-built_in">init</span>(sysobj.<span class="hljs-built_in">get</span>(), driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(),<br>	     sync_modules.<span class="hljs-built_in">get</span>(), bucket_sync_sobj.<span class="hljs-built_in">get</span>());<br>  zone_utils-&gt;<span class="hljs-built_in">init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(), zone.<span class="hljs-built_in">get</span>());<br>  quota-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>());<br>  sync_modules-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>());<br>  sysobj_core-&gt;<span class="hljs-built_in">core_init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(), zone.<span class="hljs-built_in">get</span>());<br>  <span class="hljs-keyword">if</span> (have_cache) &#123;<br>    sysobj_cache-&gt;<span class="hljs-built_in">init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(), zone.<span class="hljs-built_in">get</span>(), notify.<span class="hljs-built_in">get</span>());<br>    sysobj-&gt;<span class="hljs-built_in">init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(), sysobj_cache.<span class="hljs-built_in">get</span>());<br>  &#125; <span class="hljs-keyword">else</span> &#123;<br>    sysobj-&gt;<span class="hljs-built_in">init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(), sysobj_core.<span class="hljs-built_in">get</span>());<br>  &#125;<br>  user_rados-&gt;<span class="hljs-built_in">init</span>(driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>(), zone.<span class="hljs-built_in">get</span>(), sysobj.<span class="hljs-built_in">get</span>(), sysobj_cache.<span class="hljs-built_in">get</span>(),<br>                   meta.<span class="hljs-built_in">get</span>(), meta_be_sobj.<span class="hljs-built_in">get</span>(), sync_modules.<span class="hljs-built_in">get</span>());<br>  role_rados-&gt;<span class="hljs-built_in">init</span>(zone.<span class="hljs-built_in">get</span>(), meta.<span class="hljs-built_in">get</span>(), meta_be_sobj.<span class="hljs-built_in">get</span>(), sysobj.<span class="hljs-built_in">get</span>());<br>  can_shutdown = <span class="hljs-literal">true</span>;<br><br>  <span class="hljs-type">int</span> r = finisher-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>  <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start finisher service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>    <span class="hljs-keyword">return</span> r;<br>  &#125;<br><br>  <span class="hljs-keyword">if</span> (!raw) &#123;<br>    r = notify-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start notify service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br>  &#125;<br><br>  <span class="hljs-keyword">if</span> (!raw) &#123;<br>    r = zone-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start zone service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = datalog_rados-&gt;<span class="hljs-built_in">start</span>(dpp, &amp;zone-&gt;<span class="hljs-built_in">get_zone</span>(),<br>			     zone-&gt;<span class="hljs-built_in">get_zone_params</span>(),<br>			     driver-&gt;<span class="hljs-built_in">getRados</span>()-&gt;<span class="hljs-built_in">get_rados_handle</span>());<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start datalog_rados service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = mdlog-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start mdlog service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = sync_modules-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start sync modules service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br>  &#125;<br><br>  r = cls-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>  <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start cls service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>    <span class="hljs-keyword">return</span> r;<br>  &#125;<br><br>  r = config_key_rados-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>  <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start config_key service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>    <span class="hljs-keyword">return</span> r;<br>  &#125;<br><br>  r = zone_utils-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>  <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start zone_utils service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>    <span class="hljs-keyword">return</span> r;<br>  &#125;<br><br>  r = quota-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>  <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start quota service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>    <span class="hljs-keyword">return</span> r;<br>  &#125;<br><br>  r = sysobj_core-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>  <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start sysobj_core service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>    <span class="hljs-keyword">return</span> r;<br>  &#125;<br><br>  <span class="hljs-keyword">if</span> (have_cache) &#123;<br>    r = sysobj_cache-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start sysobj_cache service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br>  &#125;<br><br>  r = sysobj-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>  <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start sysobj service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>    <span class="hljs-keyword">return</span> r;<br>  &#125;<br><br>  <span class="hljs-keyword">if</span> (!raw) &#123;<br>    r = meta_be_sobj-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start meta_be_sobj service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = meta-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start meta service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = bucket_sobj-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start bucket service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = bucket_sync_sobj-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start bucket_sync service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = user_rados-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start user_rados service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = otp-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldpp_dout</span>(dpp, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start otp service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br><br>    r = role_rados-&gt;<span class="hljs-built_in">start</span>(y, dpp);<br>    <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>      <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start role_rados service (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>      <span class="hljs-keyword">return</span> r;<br>    &#125;<br>  &#125;<br><br>  <span class="hljs-comment">/* cache or core services will be started by sysobj */</span><br><br>  <span class="hljs-keyword">return</span>  <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+<h1 id="RGW-Service-Meshing"><a href="#RGW-Service-Meshing" class="headerlink" title="RGW Service Meshing"></a>RGW Service Meshing</h1><div style="width: 1000px;">
+  <img src="/rgw-code-reading1/rados-service-mesh.png" srcset="/img/loading.gif" lazyload alt="Service Mesh" style="width:100%;" />
+</div> 
 
-<h2 id="How-rgw-down-to-services-init"><a href="#How-rgw-down-to-services-init" class="headerlink" title="How rgw down to services init"></a>How rgw down to services init</h2><p>​	<img src="/rgw-code-reading1/services-init-callstack.png" srcset="/img/loading.gif" lazyload alt="service init callstack"></p>
+
+
+<h1 id="How-services-Inited"><a href="#How-services-Inited" class="headerlink" title="How services Inited"></a>How services Inited</h1><h2 id="How-rgw-down-to-services-init"><a href="#How-rgw-down-to-services-init" class="headerlink" title="How rgw down to services init"></a>How rgw down to services init</h2><div style="width: 1000px;">
+  <img src="/rgw-code-reading1/rgw-init-routine.png" srcset="/img/loading.gif" lazyload alt="RGW init" style="width:100%;" />
+</div> 
+
+<h2 id="Service-init"><a href="#Service-init" class="headerlink" title="Service init"></a>Service init</h2><p>RGWServices_Def::Init has mainly three parts:</p>
+<ul>
+<li><p>Create instance of each services.</p>
+</li>
+<li><p>Do services mesh references with init().  IN most of init functions, it just fill the other service instances into local srv structure.  Except:</p>
+<ul>
+<li>RGWSI_Zone:  It also create instances of <code>RGWRealm</code>, <code>RGWZoneGroup</code>, <code>RGWZone</code>, <code>RGWZoneParams</code> and <code>RGWPeriod</code>.</li>
+</ul>
+</li>
+<li><p>Start services with do_start(). This part is more complex.  </p>
+<ul>
+<li><p>RGWSI_Finisher: call Finisher.start(), which create the finisher thread</p>
+</li>
+<li><p>RGWSI_Notify:  call RGWSI_Zone start(), and also call RGW_Finisher.start() again. Don’t understand why???</p>
+</li>
+<li><p><strong>RGWSI_Zone</strong>:  Based on current code, it should be already called in RGWSI_Notify.start().  It call the RGWSI_SysObj.start(), and also init the Realm, zone group, zone, and period.</p>
+</li>
+<li><p><strong>RGWDataChangesLog</strong>： Call start to start data change log syncing thread.</p>
+</li>
+<li><p><strong>RGWSI_MDLog</strong>: call start to start the metadata log syncing.</p>
+</li>
+<li><p><strong>RGWSI_SyncModules</strong>: call start to start the syncing module handlers</p>
+</li>
+<li><p>RGWSI_Cls: call start to start mfa</p>
+</li>
+<li><p>RGWSI_ConfigKey_RADOS： Call start to to check the connection to monitor nodes to the config SSL keys</p>
+</li>
+<li><p>RGWSI_ZoneUtils: Nothing important</p>
+</li>
+<li><p>RGWSI_Quota: do nothing</p>
+</li>
+<li><p>RGWSI_SysObj_Core: do nothing</p>
+</li>
+<li><p>RGWSI_SysObj” do nothing</p>
+</li>
+<li><p>RGWSI_MetaBackend_SObj: do nothing</p>
+</li>
+<li><p>RGWSI_Meta: do nothing</p>
+</li>
+<li><p>RGWSI_Bucket_SObj: Call start to register the Metadata backend handler and module for bucket endpoint and instance info</p>
+</li>
+<li><p>RGWSI_Bucket_Sync: Do nothing</p>
+</li>
+<li><p>RGWSI_User_RADOS: Call start to create the Metadata backend handler and module for user</p>
+</li>
+<li><p>RGWSI_OTP: create the Metadata backend handler and module for OTP</p>
+</li>
+<li><p>RGWSI_Role_RADOS: create Metadata backend handler and module for Role</p>
+</li>
+</ul>
+<p>  ​</p>
+</li>
+</ul>
+<h2 id="Ctl-init"><a href="#Ctl-init" class="headerlink" title="Ctl init"></a>Ctl init</h2><div style="width: 1000px;">
+  <img src="/rgw-code-reading1/rgw-ctrl.png" srcset="/img/loading.gif" lazyload alt="RGW Control" style="width:100%;" />
+</div> 
+
+
+
+
+
+
+
+<p>In <code>RGWCtlDef::init</code>, it create all metadata handlers.  Please pay attention that <code>account</code> and <code>group</code> doesn’t use the generic metadata handler, they are designed in a much simpler way. And also, the <code>bucket endpoint and instance </code>will have different handlers depending on if has <code>sync module</code>.</p>
+<p>After that, it start to init all the metadata handlers by setting references to service instance and ctrl instance.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs C++"> <span class="hljs-comment">// Init the bucket_meta_handler reference to RGWSI_Bucket_Sobj and RGWBucketCtl, and set the be_handler</span><br>bucket_meta_handler-&gt;<span class="hljs-built_in">init</span>(svc.bucket, bucket.<span class="hljs-built_in">get</span>()); <br><span class="hljs-comment">// Similar as above</span><br> bi_meta_handler-&gt;<span class="hljs-built_in">init</span>(svc.zone, svc.bucket, svc.bi);<br> ...<br> otp_handler-&gt;<span class="hljs-built_in">init</span>(svc.zone, svc.meta_be_otp, svc.otp);<br> ...<br><br><br></code></pre></td></tr></table></figure>
+
+<p>​	Then it start to init the control instance</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs C++">user-&gt;<span class="hljs-built_in">init</span>(bucket.<span class="hljs-built_in">get</span>());<br>bucket-&gt;<span class="hljs-built_in">init</span>(user.<span class="hljs-built_in">get</span>(),<br>             (RGWBucketMetadataHandler *)bucket_meta_handler,<br>             (RGWBucketInstanceMetadataHandler *)bi_meta_handler,<br>      svc.datalog_rados,<br>             dpp);<br><br>otp-&gt;<span class="hljs-built_in">init</span>((RGWOTPMetadataHandler *)meta.otp.<span class="hljs-built_in">get</span>());<br></code></pre></td></tr></table></figure>
+
+<p>After that, all the metadata handlers are registered to RGWMetadataManagers</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><code class="hljs C++">r = meta.user-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init meta.user ctl (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br><br> r = meta.bucket-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init meta.bucket ctl (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br><br> r = meta.bucket_instance-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init meta.bucket_instance ctl (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br><br> r = meta.otp-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init otp ctl (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br><br> r = meta.role-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init meta.role ctl (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br><br> r = _ctl.meta.account-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init meta.account ctl (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br><br> r = meta.topic-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init topic ctl (&quot;</span><br>                 &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br><br> r = _ctl.meta.group-&gt;<span class="hljs-built_in">attach</span>(meta.mgr);<br> <span class="hljs-keyword">if</span> (r &lt; <span class="hljs-number">0</span>) &#123;<br>   <span class="hljs-built_in">ldout</span>(cct, <span class="hljs-number">0</span>) &lt;&lt; <span class="hljs-string">&quot;ERROR: failed to start init meta.group ctl (&quot;</span> &lt;&lt; <span class="hljs-built_in">cpp_strerror</span>(-r) &lt;&lt; dendl;<br>   <span class="hljs-keyword">return</span> r;<br> &#125;<br> <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br></code></pre></td></tr></table></figure>
+
+<p>The last step is <code>RGWRados::init_complete</code>.</p>
+<ul>
+<li>It first open io context for each pools if the pools exist, otherwise create the pool and also open the io context.</li>
+<li>Initialize the <code>RGWGC</code></li>
+<li>initialize the <code>RGWObjectExpirer</code></li>
+<li>initialize the sync thread <code>RGWMetaSyncProcessorThread</code>for meta data. If current zone is the metadata master, initialize and start the <code>RGWMetaNotifier</code> thread.</li>
+<li>Configure the bucket trim manager</li>
+<li>intiailize the  object data sync threads <code>RGWDataSyncProcessorThread</code>for each <code>sync_from</code> zone in the configuration list. </li>
+<li>initialize the <code>RGWSyncLogTrimThread</code></li>
+<li>intialize and start the <code>RGWDataNotifier</code></li>
+<li>Intialize bucket info cache and topic cache</li>
+<li>Intialize and start the LifeCycle Cofiguration thread <code>RGWLC</code></li>
+<li>Initalize the max bucket shards, and start reshard thread <code>RGWReshard</code></li>
+<li>Create instance of <code>RGWIndexCompletionManager</code></li>
+<li>start notificaiton thread, and migrate V1 to V2.</li>
+</ul>
 <h1 id="MDlog-Service"><a href="#MDlog-Service" class="headerlink" title="MDlog Service"></a>MDlog Service</h1><blockquote>
 <p>The MDlog service is used to read&#x2F;write MDLogs. There are two type of MDLogs</p>
 <ul>
@@ -426,13 +539,60 @@
 <li>Post-modify MDLOG with flag MDLOG_STATUS_COMPLETE</li>
 </ul>
 </blockquote>
-<p><img src="/rgw-code-reading1/mdlog-service.png" srcset="/img/loading.gif" lazyload alt="Metadata Backend Service"></p>
-<h1 id="Metadata-Backend-Service"><a href="#Metadata-Backend-Service" class="headerlink" title="Metadata Backend Service"></a>Metadata Backend Service</h1><blockquote>
-<p>The Metadata Backend service is used to execute the metadata operation, and also handle the meta data syncing among zones in same zone group. It provide 4 methods:</p>
+<div style="width: 400px;">
+  <img src="/rgw-code-reading1/mdlog-service.png" srcset="/img/loading.gif" lazyload alt=" MDlog Service Code" style="width:100%;" />
+</div>
+
+
+
+<h1 id="System-Object-Service"><a href="#System-Object-Service" class="headerlink" title="System Object Service"></a>System Object Service</h1><blockquote>
+<p>The system object service provide a basic metadata read&#x2F;write operation.  </p>
+<ul>
+<li>ROP: for read operation</li>
+<li>WOP: for write operation</li>
+<li>OmapOP: for omap operation</li>
+<li>WNOp: for notification write</li>
+</ul>
 </blockquote>
-<p><img src="/rgw-code-reading1/metadata-backend-service.png" srcset="/img/loading.gif" lazyload alt="Metadata Backend Service"></p>
+<blockquote>
+<p> OMAP  - A key-value map used in metadata objects</p>
+<p> In rgw code, it looks like didn’t save the key, it just use a fixed schema to serialize the structure.</p>
+</blockquote>
+<div style="width: 600px;">
+  <img src="/rgw-code-reading1/sysobject-class.png" srcset="/img/loading.gif" lazyload alt="System Object Service Code" style="width:100%;" />
+</div>
+
+<h1 id="Metadata-Backend-Service"><a href="#Metadata-Backend-Service" class="headerlink" title="Metadata Backend Service"></a>Metadata Backend Service</h1><blockquote>
+<p>The Metadata Backend service is used to execute the metadata operation, and also handle the meta data syncing among zones in same zone group. </p>
+</blockquote>
+<div style="width: 1000px;">
+  <img src="/rgw-code-reading1/metadata-backend.png" srcset="/img/loading.gif" lazyload alt="Metadata Backend Service Code" style="width:100%;" />
+</div>
+
+
+
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">RGWSI_MetaBackend::do_mutate</span><span class="hljs-params">(RGWSI_MetaBackend::Context *ctx,</span></span><br><span class="hljs-params"><span class="hljs-function">				 <span class="hljs-type">const</span> string&amp; key,</span></span><br><span class="hljs-params"><span class="hljs-function">				 <span class="hljs-type">const</span> ceph::real_time&amp; mtime,</span></span><br><span class="hljs-params"><span class="hljs-function">				 RGWObjVersionTracker *objv_tracker,</span></span><br><span class="hljs-params"><span class="hljs-function">				 RGWMDLogStatus op_type,</span></span><br><span class="hljs-params"><span class="hljs-function">                                 optional_yield y,</span></span><br><span class="hljs-params"><span class="hljs-function">				 std::function&lt;<span class="hljs-type">int</span>()&gt; f,</span></span><br><span class="hljs-params"><span class="hljs-function">				 <span class="hljs-type">bool</span> generic_prepare,</span></span><br><span class="hljs-params"><span class="hljs-function">                                 <span class="hljs-type">const</span> DoutPrefixProvider *dpp)</span></span><br><span class="hljs-function"></span>&#123;<br>  <span class="hljs-type">int</span> ret;<br><br>  <span class="hljs-keyword">if</span> (generic_prepare) &#123;<br>    ret = <span class="hljs-built_in">prepare_mutate</span>(ctx, key, mtime, objv_tracker, y, dpp);<br>    <span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span> ||<br>	ret == STATUS_NO_APPLY) &#123;<br>      <span class="hljs-keyword">return</span> ret;<br>    &#125;<br>  &#125;<br><br>  RGWMetadataLogData log_data;<br>   <span class="hljs-comment">/*Flag the mdlog as WRITE/REMOVE*/</span><br>  ret = <span class="hljs-built_in">pre_modify</span>(dpp, ctx, key, log_data, objv_tracker, op_type, y);<br>  <span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>) &#123;<br>    <span class="hljs-keyword">return</span> ret;<br>  &#125;<br>	<br>  <span class="hljs-comment">/* Execute the operation */</span><br>  ret = <span class="hljs-built_in">f</span>();<br><br>  <span class="hljs-comment">/* cascading ret into post_modify(). Flag the mdlog as COMPLETE */</span><br>  ret = <span class="hljs-built_in">post_modify</span>(dpp, ctx, key, log_data, objv_tracker, ret, y);<br>  <span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>)<br>    <span class="hljs-keyword">return</span> ret;<br><br>  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
 
+<p>From the above chart, you can see MetaData Backend defined three part of APIs:</p>
+<ul>
+<li>The set for data syncing hooks</li>
+<li>The set for metadata oppratons</li>
+<li>The high level operations which combines meta data operations with data syncing hooks. This set of operations are usually the interface operations exposed to outside.</li>
+</ul>
+<p>No other services use MetaBackend classes directly, but call it via an MetaBackend Handler.  The MetaBack Handler has instance of <code>MetaBackend::Module</code> to distiguish different type of meta data, identify the metadata location(Pool and namespace), and even Oids. MetaBackend method always use thoe modules to do operation.</p>
+<h1 id="MetaData-Backend-SObject-Service"><a href="#MetaData-Backend-SObject-Service" class="headerlink" title="MetaData Backend SObject Service"></a>MetaData Backend SObject Service</h1><p>Backend of System Object. It implemented the <code>RGWSI_MetaBackend</code>.It is the major metadata backends in rgw.  It have different <code>RGWSI_MBSObj_Handler_Module</code>.  Each <code>RGWSI_MBSObj_Handler_Module</code> class defined the pools and prefix of each system object type using by providing following methods:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">void</span> <span class="hljs-title">get_pool_and_oid</span><span class="hljs-params">(<span class="hljs-type">const</span> std::string&amp; key, rgw_pool *pool, std::string *oid)</span> </span>= <span class="hljs-number">0</span>;<br><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">const</span> std::string&amp; <span class="hljs-title">get_oid_prefix</span><span class="hljs-params">()</span> </span>= <span class="hljs-number">0</span>;<br><span class="hljs-function"><span class="hljs-keyword">virtual</span> std::string <span class="hljs-title">key_to_oid</span><span class="hljs-params">(<span class="hljs-type">const</span> std::string&amp; key)</span> </span>= <span class="hljs-number">0</span>;<br><span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">bool</span> <span class="hljs-title">is_valid_oid</span><span class="hljs-params">(<span class="hljs-type">const</span> std::string&amp; oid)</span> </span>= <span class="hljs-number">0</span>;<br><span class="hljs-function"><span class="hljs-keyword">virtual</span> std::string <span class="hljs-title">oid_to_key</span><span class="hljs-params">(<span class="hljs-type">const</span> std::string&amp; oid)</span> </span>= <span class="hljs-number">0</span>;<br></code></pre></td></tr></table></figure>
+
+<p>Based on the sub modules, it is easily find out the RGWSI_metaBackend_SObj is mainly used to operate and sync the metadata object in <code>rgw.meta</code> pool, and each modules take charge of a namespace.</p>
+<div style="width: 400px;">
+  <img src="/rgw-code-reading1/metadata_be_module.png" srcset="/img/loading.gif" lazyload alt="Metadata Backend Modules" style="width:100%;" />
+</div>
+
+<figure class="highlight crmsh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs crmsh">enum RGWSI_META_BE_TYPES &#123;<br>  SOBJ   = <span class="hljs-number">1</span>,<br>  OTP    = <span class="hljs-number">2</span>,<br>  BUCKET = <span class="hljs-number">3</span>,<br>  BI     = <span class="hljs-number">4</span>,<br>  <span class="hljs-keyword">USER</span>   <span class="hljs-title">= 5</span>,<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<h1 id="RGW-Zone-Service"><a href="#RGW-Zone-Service" class="headerlink" title="RGW Zone Service"></a>RGW Zone Service</h1><p>#TBD</p>
+<h1 id="RGW-DataChangeLog-service"><a href="#RGW-DataChangeLog-service" class="headerlink" title="RGW DataChangeLog service"></a>RGW DataChangeLog service</h1><h1 id="Sync-Module-Service"><a href="#Sync-Module-Service" class="headerlink" title="Sync Module Service"></a>Sync Module Service</h1><h1 id="RGWSI-Cls"><a href="#RGWSI-Cls" class="headerlink" title="RGWSI_Cls"></a>RGWSI_Cls</h1><p>An abstraction of librados objclass operations</p>
+<p>Includes MFA, lock.</p>
 
                 
               </div>
